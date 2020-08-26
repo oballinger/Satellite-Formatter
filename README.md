@@ -1,6 +1,2 @@
 # Satellite-Formatter
-Several Python and Javascript based workflows to turn satellite imagery into longitudinal dataframes. 
-
-Javascript files should be run in Google Earth Engine (https://code.earthengine.google.com/). These manage the loading, analysis, and exporting of satellite imagery to .csv files. 
-
-Python files clean and format the .csv outputs of the remote sensing analysis. 
+Some useful functions in Google Earth Engine to process, format, and export remote sensing data. Link to GEE code: https://code.earthengine.google.com/92a4c2f75e6bf2422edbe8a1901c9b71
