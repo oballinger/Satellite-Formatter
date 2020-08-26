@@ -1,4 +1,4 @@
-// filter an image collection such that there is only one image per timeframe 
+// Aggregate data over a given timeframe (e.g. week/month/year).
 
 exports.time_agg=function(col, timeframe){
 
