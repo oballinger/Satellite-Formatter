@@ -1,68 +1,28 @@
-// this is code for Google Earth Engine. Because GEE runs on Google servers, it is advisable to do as much computationally intensive work on earth engine. It can be accessed here: https://code.earthengine.google.com/
-
-// load image collections; in this case, LANDSAT 32-day NDVI composites 
-
-var L7 = ee.ImageCollection('LANDSAT/LE07/C01/T1_32DAY_NDVI')
-          .select('NDVI')          
-
-var L8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_32DAY_NDVI')
-          .select('NDVI')
-
-var L5 = ee.ImageCollection('LANDSAT/LT05/C01/T1_32DAY_NDVI')
-          .select('NDVI')
-
-// load feature collection/shapefile of desired region; this is an example using U.S. counties
-
-var regions= ee.FeatureCollection("TIGER/2016/Counties")
-
-// load color palette
-
-var colorizedVis = {
-  min: 0.0,
-  max: 1.0,
-  palette: [
-    'FFFFFF', 'CE7E45', 'DF923D', 'F1B555', 'FCD163', '99B718', '74A901',
-    '66A000', '529400', '3E8601', '207401', '056201', '004C00', '023B01',
-    '012E01', '011D01', '011301'
-  ],
-}
-
-// optional topographic layers; these are particularly helpful for identifying arable land
-
-var dataset = ee.Image('USGS/SRTMGL1_003');
-var elevation = dataset.select('elevation');
-var slope = ee.Terrain.slope(elevation);
-
-// optional vizualisation 
-Map.addLayer(L8, colorizedVis, 'L8');
-Map.addLayer(L5, colorizedVis, 'L5');
-Map.addLayer(L7, colorizedVis, 'L7');
-
-// export data to google drive
-
-var zonalstats = function(collection,regions, level, filename){
+exports.zonalstats=function(collection,regions, level, filename, scale){
   
     var rename_band = function(img){
       return img.select([0], [img.id()]);
     };
 
-    var stacked_image = collection.map(rename_band).toBands().clip(regions);
-// determine scale to perform reduceRegions.
-    var scale = collection.first().projection().nominalScale();
-  
-// calculate longitudinal area statistics for each region.
-    var mean = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.mean()});
-    var median = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.median()});
-    var stddev = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.stdDev()});
-    var sum = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.sum()});
+// stack all the images into a single image for a time-series collection
+    var panel= ee.ImageCollection(collection).size()
+    var stacked_image=ee.Algorithms.If(panel.gt(1),
+                                       collection.map(rename_band).toBands().clip(regions),
+                                       collection)
+
+// calculate the timeseries for each feature.
+    var mean = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.mean(), scale: scale});
+    var median = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.median(), scale: scale});
+    var stddev = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.stdDev(),  scale: scale});
+    var sum = ee.Image(stacked_image).reduceRegions({collection: regions, reducer: ee.Reducer.sum(), scale: scale});
     
     var mean1 = mean.select(['.*'],null,false);
     var median1 = median.select(['.*'],null,false);
     var stddev1 = stddev.select(['.*'],null,false);
     var sum1 = sum.select(['.*'],null,false);
     
+    print(mean1)
 // export results.
-
     var file=filename
     var levels=level
   return [
@@ -92,7 +52,4 @@ var zonalstats = function(collection,regions, level, filename){
     })
   ]
 }
-
-//execute the function using Landsat 8 NDVI imagery and U.S. Counties as regions.
-zonalstats(L8, regions, "County", "NDVI")
 
